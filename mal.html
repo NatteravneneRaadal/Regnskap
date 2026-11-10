@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regnskap – Natteravnene Rådal</title>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f4f3ef; --surface:#fcfcfb; --line:#e3e1da; --grid:#ecebe6;
+  --text:#0b0b0b; --text2:#52514e; --muted:#7a7972;
+  --accent:#1f2a44; --s1:#f5cc00; --s1edge:#b89400; --s2:#141414; --ink:#141414; --yel:#ffe11a; --area:rgba(245,204,0,.28);
+  --pos:#0f7a3d; --neg:#b42318; --hover:#f0efe9;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    color-scheme:dark;
+    --bg:#121211; --surface:#1a1a19; --line:#2e2e2b; --grid:#262624;
+    --text:#f0efec; --text2:#c3c2b7; --muted:#8f8e86;
+    --accent:#c9d4f0; --s1:#ffd60a; --s1edge:#ffd60a; --s2:#ecebe6; --ink:#ecebe6; --yel:#ffe11a; --area:rgba(255,214,10,.16);
+    --pos:#5cc98a; --neg:#f08a80; --hover:#232321;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 20px 48px}
+header{display:flex;align-items:center;gap:16px 24px;flex-wrap:wrap}
+header .logo{height:56px;width:auto;border-radius:8px;display:block}
+header h1{margin:0;font-size:26px;letter-spacing:-.01em}
+header p{margin:4px 0 0;color:var(--text2)}
+.tabs{display:flex;gap:4px;margin:22px 0 20px;border-bottom:1px solid var(--line)}
+.tabs button{appearance:none;border:0;background:none;color:var(--text2);
+  font:inherit;font-weight:600;padding:10px 16px;cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--yel)}
+.tabs button:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.panel[hidden]{display:none}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:18px 20px;margin-bottom:16px}
+.card h2{font-size:16px;margin:0 0 2px}
+.card .sub{color:var(--text2);font-size:13px;margin:0 0 14px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.tile .lbl{font-size:13px;color:var(--text2)}
+.tile .val{font-size:24px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}
+.tile .cmp{font-size:12.5px;color:var(--muted);margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--text2);margin-bottom:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block;box-sizing:border-box}
+.legend i.y,.tip i.y{border:1px solid var(--s1edge)}
+svg text{fill:var(--text2);font-size:12px}
+svg .axis{stroke:var(--line)}
+svg .gridl{stroke:var(--grid)}
+.chart{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--surface);color:var(--text);
+  border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;
+  box-shadow:0 4px 14px rgba(0,0,0,.12);white-space:nowrap;opacity:0;transition:opacity .1s;z-index:5}
+.tip b{display:block;margin-bottom:2px}
+.tip .r{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.tip i{width:9px;height:9px;border-radius:2px;display:inline-block}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--grid)}
+th{font-size:12.5px;color:var(--text2);font-weight:600}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr.seksjon td{font-weight:650;padding-top:16px;border-bottom:1px solid var(--line)}
+tr.sum td{font-weight:650;border-top:1px solid var(--text2)}
+tr.res td{font-weight:700;font-size:16px;border-top:2px solid var(--text);border-bottom:3px double var(--text)}
+td.linje{padding-left:22px}
+.neg{color:var(--neg)} .pos{color:var(--pos)}
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;align-items:end}
+.filters label{display:flex;flex-direction:column;font-size:12.5px;color:var(--text2);gap:4px}
+.filters input,.filters select{font:inherit;font-size:14px;padding:7px 10px;border-radius:8px;
+  border:1px solid var(--line);background:var(--surface);color:var(--text);min-width:150px}
+.filters input{min-width:220px}
+.filters button{font:inherit;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);
+  background:none;color:var(--text2);cursor:pointer}
+.ib{display:flex;flex-wrap:wrap;gap:24px;font-size:14px;color:var(--text2);margin-bottom:12px}
+.ib b{color:var(--text);font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#hb th.sort{cursor:pointer;user-select:none}
+#hb th.sort:hover{color:var(--text)}
+#hb tbody tr:hover{background:var(--hover)}
+#hb tfoot td{font-weight:650;border-top:1px solid var(--text2);border-bottom:0}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--hover);color:var(--text2);white-space:nowrap}
+.count{font-size:13px;color:var(--text2);margin:0 0 8px}
+footer{color:var(--muted);font-size:12.5px;margin-top:24px}
+@media (max-width:820px){
+  .tiles{grid-template-columns:repeat(2,1fr)}
+  .grid2{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .wrap{padding:16px 12px 40px}
+  .tile .val{font-size:20px}
+  .filters input{min-width:0;width:100%}
+  .filters label{flex:1 1 140px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Regnskap <span id="aar"></span> – Natteravnene Rådal</h1>
+      <p id="status"></p>
+    </div>
+    <img class="logo" alt="Natteravnene Rådal" src="data:image/png;base64,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">
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-arsregnskap" aria-controls="arsregnskap" aria-selected="true">Årsregnskap</button>
+    <button role="tab" id="tab-hovedbok" aria-controls="hovedbok" aria-selected="false">Hovedbok</button>
+  </div>
+
+  <section class="panel" id="arsregnskap" role="tabpanel" aria-labelledby="tab-arsregnskap">
+    <div class="tiles" id="tiles"></div>
+    <div class="grid2">
+      <div class="card">
+        <h2>Driftsinntekter</h2>
+        <p class="sub">Per kategori, sammenlignet med fjoråret</p>
+        <div class="legend" id="leg1"></div>
+        <div class="chart" id="chInn"></div>
+      </div>
+      <div class="card">
+        <h2>Driftskostnader</h2>
+        <p class="sub">Per kategori, sammenlignet med fjoråret</p>
+        <div class="legend" id="leg2"></div>
+        <div class="chart" id="chUt"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Bankinnskudd gjennom året</h2>
+      <p class="sub">Saldo på bankkonto etter hvert bilag, fra inngående balanse 1. januar</p>
+      <div class="chart" id="chBank"></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>Resultatregnskap</h2><p class="sub" id="resSub"></p><div class="tablewrap"><table id="tRes"></table></div></div>
+      <div class="card"><h2>Balanse</h2><p class="sub" id="balSub"></p><div class="tablewrap"><table id="tBal"></table></div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="hovedbok" role="tabpanel" aria-labelledby="tab-hovedbok" hidden>
+    <div class="card">
+      <h2>Hovedbok</h2>
+      <p class="sub">Alle bilag i året. «Inn» og «Ut» er sett fra kontoen bilaget er ført mot (bank eller kundefordringer).</p>
+      <div class="ib" id="ibrow"></div>
+      <div class="filters">
+        <label>Søk<input id="fSok" type="search" placeholder="Beskrivelse eller bilagsnr."></label>
+        <label>Kategori<select id="fKat"></select></label>
+        <label>Måned<select id="fMnd"></select></label>
+        <button id="fNull" type="button">Nullstill</button>
+      </div>
+      <p class="count" id="hbCount"></p>
+      <div class="tablewrap">
+        <table id="hb">
+          <thead><tr>
+            <th class="sort n" data-k="b">Bilag</th>
+            <th class="sort" data-k="d">Dato</th>
+            <th class="sort" data-k="t">Beskrivelse</th>
+            <th class="sort" data-k="m">Kategori</th>
+            <th class="sort" data-k="k">Konto</th>
+            <th class="sort n" data-k="inn">Inn</th>
+            <th class="sort n" data-k="ut">Ut</th>
+          </tr></thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+if (!DATA) {
+  document.querySelector('.wrap').innerHTML = '<div class="card"><h2>Dette er malen, ikke selve siden</h2>' +
+    '<p class="sub">mal.html har ingen regnskapstall. Åpne index.html, eller lag den på nytt med generate_regnskap.py.</p></div>';
+  throw new Error('Mal uten data – åpne index.html');
+}
+
+const nf2 = new Intl.NumberFormat('nb-NO',{minimumFractionDigits:2,maximumFractionDigits:2});
+const nf0 = new Intl.NumberFormat('nb-NO',{maximumFractionDigits:0});
+const kr = v => nf2.format(v);
+const kr0 = v => nf0.format(v) + ' kr';
+const datoNo = s => { const [y,m,d] = s.split('-'); return `${d}.${m}.${y}`; };
+const MND = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+const MNDL = ['Januar','Februar','Mars','April','Mai','Juni','Juli','August','September','Oktober','November','Desember'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs={}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+const AAR = DATA.aar, FJOR = AAR - 1;
+const res = DATA.oppstillinger.find(o => /Årsregnskap/i.test(o.tittel)) || DATA.oppstillinger[0];
+const bal = DATA.oppstillinger.find(o => /Balanse/i.test(o.tittel)) || DATA.oppstillinger[1];
+const linje = (o, navn) => (o.rader.find(r => r.tekst === navn) || {v:[0,0]}).v;
+const seksjonLinjer = (o, navn) => {
+  const out = []; let inne = false;
+  for (const r of o.rader) {
+    if (r.type === 'seksjon') { inne = r.tekst === navn; continue; }
+    if (inne && r.type === 'linje') out.push(r);
+  }
+  return out;
+};
+
+document.getElementById('aar').textContent = AAR;
+document.getElementById('status').textContent =
+  `Foreløpig regnskap – oppdatert med bilag til og med ${datoNo(DATA.sisteBilag)}.`;
+document.getElementById('foot').textContent =
+  `Kilde: regnskapsarbeidsboka, arkene «${AAR} Årsregnskap» og «${AAR} Hovedbok». Siden ble generert ${datoNo(DATA.generert)}.`;
+
+/* ---------- Faner ---------- */
+const TABS = ['arsregnskap','hovedbok'];
+function visFane(id, push) {
+  if (!TABS.includes(id)) id = 'arsregnskap';
+  TABS.forEach(t => {
+    document.getElementById(t).hidden = t !== id;
+    document.getElementById('tab-' + t).setAttribute('aria-selected', t === id);
+  });
+  if (push && location.hash !== '#' + id) history.replaceState(null, '', '#' + id);
+  if (id === 'arsregnskap') tegnAlle();
+}
+TABS.forEach(t => document.getElementById('tab-' + t).addEventListener('click', () => visFane(t, true)));
+window.addEventListener('hashchange', () => visFane(location.hash.slice(1)));
+
+/* ---------- Nøkkeltall ---------- */
+(function tiles() {
+  const inn = linje(res, 'Sum driftsinntekter'), ut = linje(res, 'Sum driftskostnader');
+  const r = linje(res, 'Årsresultat'), bank = linje(bal, 'Bankinnskudd');
+  const T = [
+    ['Driftsinntekter', inn[0], `${FJOR}: ${kr0(inn[1])}`],
+    ['Driftskostnader', ut[0], `${FJOR}: ${kr0(ut[1])}`],
+    ['Resultat hittil', r[0], `${FJOR}: ${kr0(r[1])}`, true],
+    ['Bankinnskudd', bank[0], `1. januar: ${kr0(DATA.ib.Bank ?? bank[1])}`],
+  ];
+  document.getElementById('tiles').innerHTML = T.map(([l, v, c, fortegn]) =>
+    `<div class="tile"><div class="lbl">${l}</div><div class="val ${fortegn ? (v < 0 ? 'neg' : 'pos') : ''}">${kr0(v)}</div><div class="cmp">${c}</div></div>`).join('');
+})();
+
+/* ---------- Tooltip ---------- */
+function lagTip(box) { const t = document.createElement('div'); t.className = 'tip'; box.appendChild(t); return t; }
+function plasserTip(tip, box, x, y) {
+  const bw = box.clientWidth, tw = tip.offsetWidth;
+  let left = x + 14; if (left + tw > bw) left = x - tw - 14; if (left < 0) left = 0;
+  tip.style.left = left + 'px'; tip.style.top = Math.max(0, y - 10) + 'px'; tip.style.opacity = 1;
+}
+
+/* ---------- Liggende søylediagram (i år mot fjor) ---------- */
+function legend(id) {
+  document.getElementById(id).innerHTML =
+    `<span><i class="y" style="background:var(--s1)"></i>${AAR} (hittil)</span><span><i style="background:var(--s2)"></i>${FJOR}</span>`;
+}
+function stolper(boxId, rader) {
+  const box = document.getElementById(boxId); box.innerHTML = '';
+  rader = rader.filter(r => r.v[0] || r.v[1]);
+  const W = Math.max(box.clientWidth, 280), labW = Math.min(130, W * 0.36), padR = 64;
+  const bh = 9, gap = 2, gruppe = bh * 2 + gap + 16, H = rader.length * gruppe + 24;
+  const maks = Math.max(...rader.flatMap(r => r.v)) || 1;
+  const sx = v => (v / maks) * (W - labW - padR);
+  const svg = el('svg', {width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img'}, box);
+  // rutenett
+  const steg = finnSteg(maks);
+  for (let v = 0; v <= maks; v += steg) {
+    const x = labW + sx(v);
+    el('line', {x1: x, x2: x, y1: 0, y2: H - 20, class: 'gridl'}, svg);
+    const t = el('text', {x, y: H - 4, 'text-anchor': 'middle'}, svg); t.textContent = kortTall(v);
+  }
+  const tip = lagTip(box);
+  rader.forEach((r, i) => {
+    const y0 = i * gruppe + 6;
+    const bg = el('rect', {x: 0, y: y0 - 6, width: W, height: gruppe - 2, rx: 6, fill: 'transparent'}, svg);
+    const lt = el('text', {x: labW - 10, y: y0 + bh + 3, 'text-anchor': 'end'}, svg);
+    lt.textContent = r.tekst; lt.style.fill = css('--text');
+    [0, 1].forEach(j => {
+      const w = Math.max(sx(r.v[j]), r.v[j] ? 2 : 0);
+      const y = y0 + j * (bh + gap);
+      if (w) el('path', {d: barSti(labW, y, w, bh), fill: j ? 'var(--s2)' : 'var(--s1)', stroke: j ? 'none' : 'var(--s1edge)', 'stroke-width': j ? 0 : 1}, svg);
+    });
+    const vt = el('text', {x: labW + sx(r.v[0]) + 6, y: y0 + bh - 1}, svg);
+    vt.textContent = kortTall(r.v[0]);
+    const hit = el('rect', {x: 0, y: y0 - 6, width: W, height: gruppe, fill: 'transparent'}, svg);
+    const vis = ev => {
+      const d = r.v[0] - r.v[1];
+      tip.innerHTML = `<b>${esc(r.tekst)}</b>
+        <div class="r"><i class="y" style="background:var(--s1)"></i>${AAR}: ${kr(r.v[0])} kr</div>
+        <div class="r"><i style="background:var(--s2)"></i>${FJOR}: ${kr(r.v[1])} kr</div>
+        <div class="r" style="color:var(--text2)">Endring: ${d > 0 ? '+' : ''}${kr(d)} kr</div>`;
+      const b = box.getBoundingClientRect(); const p = ev.touches ? ev.touches[0] : ev;
+      plasserTip(tip, box, p.clientX - b.left, p.clientY - b.top);
+      bg.setAttribute('fill', 'var(--hover)');
+    };
+    hit.addEventListener('mousemove', vis); hit.addEventListener('touchstart', vis, {passive: true});
+    hit.addEventListener('mouseleave', () => { tip.style.opacity = 0; bg.setAttribute('fill', 'transparent'); });
+  });
+}
+function barSti(x, y, w, h) { // avrundet ende til høyre, rett mot null-linjen
+  const r = Math.min(4, w / 2, h / 2);
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+}
+function finnSteg(maks) { const rå = maks / 4, p = 10 ** Math.floor(Math.log10(rå)); return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= rå); }
+function kortTall(v) { return Math.abs(v) >= 1000 ? nf0.format(Math.round(v / 100) / 10).replace(/\s/g,' ') + 'k' : nf0.format(v); }
+
+/* ---------- Banksaldo (trappelinje) ---------- */
+function bankSerie() {
+  let s = DATA.ib.Bank || 0;
+  const pts = [{d: `${AAR}-01-01`, v: s, t: 'Inngående balanse'}];
+  DATA.tx.filter(t => t.k === 'Bank').slice().sort((a, b) => a.d.localeCompare(b.d) || a.b - b.b)
+    .forEach(t => { s += t.inn - t.ut; pts.push({d: t.d, v: s, t: `Bilag ${t.b}: ${t.t}`, inn: t.inn, ut: t.ut}); });
+  return pts;
+}
+function tegnBank() {
+  const box = document.getElementById('chBank'); box.innerHTML = '';
+  const pts = bankSerie();
+  const W = Math.max(box.clientWidth, 280), H = 240, pl = 56, pr = 16, pt = 10, pb = 26;
+  const t0 = Date.parse(`${AAR}-01-01`), t1 = Date.parse(`${AAR + 1}-01-01`);
+  const vals = pts.map(p => p.v); let lo = Math.min(...vals), hi = Math.max(...vals);
+  const steg = finnSteg((hi - lo) || 1); lo = Math.floor(lo / steg) * steg - steg; hi = Math.ceil(hi / steg) * steg;
+  const sx = d => pl + (Date.parse(d) - t0) / (t1 - t0) * (W - pl - pr);
+  const sy = v => pt + (hi - v) / (hi - lo) * (H - pt - pb);
+  const svg = el('svg', {width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Banksaldo gjennom året'}, box);
+  for (let v = lo; v <= hi + 1e-6; v += steg) {
+    el('line', {x1: pl, x2: W - pr, y1: sy(v), y2: sy(v), class: 'gridl'}, svg);
+    const t = el('text', {x: pl - 8, y: sy(v) + 4, 'text-anchor': 'end'}, svg); t.textContent = kortTall(v);
+  }
+  const smal = W < 520;
+  MND.forEach((m, i) => {
+    if (smal && i % 2) return;
+    const x = sx(`${AAR}-${String(i + 1).padStart(2, '0')}-01`);
+    const t = el('text', {x: x + 2, y: H - 6}, svg); t.textContent = m;
+  });
+  let d = `M${sx(pts[0].d)},${sy(pts[0].v)}`;
+  for (let i = 1; i < pts.length; i++) d += `H${sx(pts[i].d)}V${sy(pts[i].v)}`;
+  const sist = pts[pts.length - 1];
+  el('path', {d: d + `V${sy(lo)}H${sx(pts[0].d)}Z`, fill: 'var(--area)', stroke: 'none'}, svg);
+  el('path', {d, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, 'stroke-linejoin': 'round'}, svg);
+  el('circle', {cx: sx(sist.d), cy: sy(sist.v), r: 4, fill: 'var(--ink)', stroke: 'var(--surface)', 'stroke-width': 2}, svg);
+  const lt = el('text', {x: Math.min(sx(sist.d) + 8, W - pr - 60), y: sy(sist.v) - 8}, svg);
+  lt.textContent = kortTall(sist.v); lt.style.fill = css('--text');
+  // krysshår
+  const cross = el('line', {y1: pt, y2: H - pb, stroke: 'var(--muted)', 'stroke-dasharray': '3 3', opacity: 0}, svg);
+  const dot = el('circle', {r: 4, fill: 'var(--ink)', stroke: 'var(--surface)', 'stroke-width': 2, opacity: 0}, svg);
+  const tip = lagTip(box);
+  const hit = el('rect', {x: pl, y: pt, width: W - pl - pr, height: H - pt - pb, fill: 'transparent'}, svg);
+  const vis = ev => {
+    const b = box.getBoundingClientRect(); const p = ev.touches ? ev.touches[0] : ev;
+    const mx = p.clientX - b.left;
+    let best = pts[0];
+    for (const q of pts) if (sx(q.d) <= mx) best = q;
+    cross.setAttribute('x1', sx(best.d)); cross.setAttribute('x2', sx(best.d)); cross.setAttribute('opacity', 1);
+    dot.setAttribute('cx', sx(best.d)); dot.setAttribute('cy', sy(best.v)); dot.setAttribute('opacity', 1);
+    const bev = best.inn ? `<div class="r pos">+${kr(best.inn)} kr</div>` : best.ut ? `<div class="r neg">−${kr(best.ut)} kr</div>` : '';
+    tip.innerHTML = `<b>${datoNo(best.d)}</b><div class="r">Saldo: ${kr(best.v)} kr</div>${bev}<div class="r" style="color:var(--text2)">${esc(best.t)}</div>`;
+    plasserTip(tip, box, sx(best.d), sy(best.v));
+  };
+  hit.addEventListener('mousemove', vis); hit.addEventListener('touchstart', vis, {passive: true}); hit.addEventListener('touchmove', vis, {passive: true});
+  hit.addEventListener('mouseleave', () => { tip.style.opacity = 0; cross.setAttribute('opacity', 0); dot.setAttribute('opacity', 0); });
+}
+
+/* ---------- Oppstillinger ---------- */
+function oppstilling(tabId, o, kol) {
+  const t = document.getElementById(tabId);
+  let h = `<thead><tr><th></th><th class="n">${kol[0]}</th><th class="n">${kol[1]}</th></tr></thead><tbody>`;
+  for (const r of o.rader) {
+    if (r.type === 'seksjon') { h += `<tr class="seksjon"><td colspan="3">${esc(r.tekst)}</td></tr>`; continue; }
+    const erRes = r.tekst === 'Årsresultat' && /Årsregnskap/i.test(o.tittel);
+    const cls = erRes ? 'res' : r.type === 'sum' ? 'sum' : '';
+    const v = x => `<td class="n ${(erRes || r.type === 'sum') && x < 0 ? 'neg' : ''}">${kr(x)}</td>`;
+    h += `<tr class="${cls}"><td class="${r.type === 'linje' ? 'linje' : ''}">${esc(r.tekst)}</td>${v(r.v[0])}${v(r.v[1])}</tr>`;
+  }
+  t.innerHTML = h + '</tbody>';
+}
+oppstilling('tRes', res, [`${AAR} hittil`, `${FJOR}`]);
+oppstilling('tBal', bal, [`Pr. ${datoNo(DATA.sisteBilag)}`, `31.12.${FJOR}`]);
+document.getElementById('resSub').textContent = `Beløp i kroner. ${AAR} er foreløpig, ${FJOR} er avsluttet år.`;
+document.getElementById('balSub').textContent = 'Eiendeler, egenkapital og gjeld. Beløp i kroner.';
+
+/* ---------- Tegn diagrammer (og ved endret bredde) ---------- */
+legend('leg1'); legend('leg2');
+function tegnAlle() {
+  if (document.getElementById('arsregnskap').hidden) return;
+  stolper('chInn', seksjonLinjer(res, 'Driftsinntekter'));
+  stolper('chUt', seksjonLinjer(res, 'Driftskostnader'));
+  tegnBank();
+}
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(tegnAlle, 120); });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', tegnAlle);
+
+/* ---------- Hovedbok ---------- */
+const fSok = document.getElementById('fSok'), fKat = document.getElementById('fKat'), fMnd = document.getElementById('fMnd');
+document.getElementById('ibrow').innerHTML = Object.entries(DATA.ib)
+  .map(([k, v]) => `<span>Inngående balanse ${esc(k.toLowerCase())}: <b>${kr(v)} kr</b></span>`).join('');
+const kategorier = [...new Set(DATA.tx.map(t => t.m))].sort((a, b) => a.localeCompare(b, 'nb'));
+fKat.innerHTML = '<option value="">Alle kategorier</option>' + kategorier.map(k => `<option>${esc(k)}</option>`).join('');
+const mnder = [...new Set(DATA.tx.map(t => +t.d.slice(5, 7)))].sort((a, b) => a - b);
+fMnd.innerHTML = '<option value="">Hele året</option>' + mnder.map(m => `<option value="${m}">${MNDL[m - 1]}</option>`).join('');
+let sortK = 'b', sortDir = 1;
+function tegnHovedbok() {
+  const q = fSok.value.trim().toLowerCase(), kat = fKat.value, mnd = +fMnd.value;
+  let rows = DATA.tx.filter(t =>
+    (!kat || t.m === kat) && (!mnd || +t.d.slice(5, 7) === mnd) &&
+    (!q || t.t.toLowerCase().includes(q) || String(t.b) === q || t.m.toLowerCase().includes(q)));
+  rows.sort((a, b) => {
+    const x = a[sortK], y = b[sortK];
+    const c = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'nb');
+    return (c || a.b - b.b) * sortDir;
+  });
+  document.querySelector('#hb tbody').innerHTML = rows.map(t => `<tr>
+    <td class="n">${t.b}</td><td style="white-space:nowrap">${datoNo(t.d)}</td><td>${esc(t.t)}</td>
+    <td><span class="pill">${esc(t.m)}</span></td><td>${esc(t.k)}</td>
+    <td class="n pos">${t.inn ? kr(t.inn) : ''}</td><td class="n">${t.ut ? kr(t.ut) : ''}</td></tr>`).join('')
+    || '<tr><td colspan="7" style="color:var(--text2);padding:18px 10px">Ingen bilag passer filteret.</td></tr>';
+  const sInn = rows.reduce((s, t) => s + t.inn, 0), sUt = rows.reduce((s, t) => s + t.ut, 0);
+  document.querySelector('#hb tfoot').innerHTML =
+    `<tr><td colspan="5">Sum (${rows.length} bilag)</td><td class="n">${kr(sInn)}</td><td class="n">${kr(sUt)}</td></tr>`;
+  document.getElementById('hbCount').textContent = `Viser ${rows.length} av ${DATA.tx.length} bilag`;
+  document.querySelectorAll('#hb th.sort').forEach(th => {
+    const base = th.textContent.replace(/ [▲▼]$/, '');
+    th.textContent = base + (th.dataset.k === sortK ? (sortDir > 0 ? ' ▲' : ' ▼') : '');
+  });
+}
+document.querySelectorAll('#hb th.sort').forEach(th => th.addEventListener('click', () => {
+  if (sortK === th.dataset.k) sortDir = -sortDir; else { sortK = th.dataset.k; sortDir = 1; }
+  tegnHovedbok();
+}));
+[fSok, fKat, fMnd].forEach(e => e.addEventListener('input', tegnHovedbok));
+document.getElementById('fNull').addEventListener('click', () => { fSok.value = ''; fKat.value = ''; fMnd.value = ''; sortK = 'b'; sortDir = 1; tegnHovedbok(); });
+tegnHovedbok();
+
+visFane(location.hash.slice(1));
+</script>
+</body>
+</html>
